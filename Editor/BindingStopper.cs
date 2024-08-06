@@ -18,9 +18,12 @@ namespace ArteHacker.UITKEditorAid
     /// bound to the parent inspector's Object.
     /// </para>
     /// </remarks>
-    public class BindingStopper : VisualElement
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+    [UxmlElement]
+#endif
+    public partial class BindingStopper : VisualElement
     {
-#if !REMOVE_UXML_FACTORIES
+#if !REMOVE_UXML_FACTORIES && !UNITY_2023_3_OR_NEWER
         public new class UxmlFactory : UxmlFactory<BindingStopper> { }
 #endif
 
@@ -44,9 +47,15 @@ namespace ArteHacker.UITKEditorAid
         }
 
         [RemoveFromDocs]
+#if UNITY_2023_2_OR_NEWER
+        protected override void HandleEventBubbleUp(EventBase evt)
+        {
+            base.HandleEventBubbleUp(evt);
+#else
         protected override void ExecuteDefaultActionAtTarget(EventBase evt)
         {
             base.ExecuteDefaultActionAtTarget(evt);
+#endif
 
             if (evt.GetType() != s_SerializedObjectBindEventType)
                 return;

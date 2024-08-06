@@ -28,9 +28,12 @@ namespace ArteHacker.UITKEditorAid
     /// }
     /// ]]></code>
     /// </example>
-    public class PropertyContainer : VisualElement
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+    [UxmlElement]
+#endif
+    public partial class PropertyContainer : VisualElement
     {
-#if !REMOVE_UXML_FACTORIES
+#if !REMOVE_UXML_FACTORIES && !UNITY_2023_3_OR_NEWER
         public new class UxmlFactory : UxmlFactory<PropertyContainer, UxmlTraits> { }
 
         public new class UxmlTraits : VisualElement.UxmlTraits
@@ -69,6 +72,9 @@ namespace ArteHacker.UITKEditorAid
         public event Action<bool> onPrefabOverrideChanged;
 
         /// <summary> The path to property represented by this element. </summary>
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+        [UxmlAttribute]
+#endif
         public string bindingPath { get  => m_PropertyProxy.bindingPath; set => m_PropertyProxy.bindingPath = value; }
 
         [RemoveFromDocs]
@@ -128,7 +134,6 @@ namespace ArteHacker.UITKEditorAid
                 if (!(e.target is VisualElement))
                     return;
 
-                e.PreventDefault();
                 e.StopPropagation();
 
                 // In 2021.3, the menu is displayed from the toggleElement's position, so we put it under the mouse.

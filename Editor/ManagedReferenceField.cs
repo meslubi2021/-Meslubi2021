@@ -45,10 +45,11 @@ namespace ArteHacker.UITKEditorAid
         /// <summary> USS class name for the PropertyField inside. </summary>
         public static readonly string propertyFieldUssClassName = ussClassName + "__property-field";
 
-        private static readonly HashSet<SerializedObject> m_SerializedObjectsUpdatedRecently = new HashSet<SerializedObject>();
+        private static readonly HashSet<SerializedObject> s_SerializedObjectsUpdatedRecently = new HashSet<SerializedObject>();
 
-        private string m_Path;
-        private SerializedObject m_SerializedObject;
+        private readonly string m_Path;
+        private readonly SerializedObject m_SerializedObject;
+        private readonly PropertyField m_PropertyField;
         private string m_ReferenceType;
 
         private long m_PeriodicalUpdateInterval = 5024;
@@ -65,7 +66,7 @@ namespace ArteHacker.UITKEditorAid
             set
             {
                 m_PeriodicalUpdateInterval = System.Math.Max(value, 100);
-                m_UpdateSchedule.Every(m_PeriodicalUpdateInterval);
+                m_UpdateSchedule.Every(m_PeriodicalUpdateInterval).StartingIn(m_PeriodicalUpdateInterval);
             }
         }
 
@@ -97,11 +98,11 @@ namespace ArteHacker.UITKEditorAid
             m_SerializedObject = property.serializedObject;
             m_ReferenceType = property.managedReferenceFullTypename;
 
-            var propertyField = new PropertyField(property, label);
-            propertyField.AddToClassList(propertyFieldUssClassName);
-            Add(propertyField);
+            m_PropertyField = new PropertyField(property, label);
+            m_PropertyField.AddToClassList(propertyFieldUssClassName);
+            Add(m_PropertyField);
 
-            m_UpdateSchedule = schedule.Execute(Update).Every(m_PeriodicalUpdateInterval);
+            m_UpdateSchedule = schedule.Execute(Update).Every(m_PeriodicalUpdateInterval).StartingIn(m_PeriodicalUpdateInterval);
             RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
         }
@@ -128,7 +129,7 @@ namespace ArteHacker.UITKEditorAid
                     SendEvent(e);
                 }
                 m_ReferenceType = newType;
-                this.Bind(m_SerializedObject);
+                m_PropertyField.Bind(m_SerializedObject);
             }
         }
 
@@ -141,20 +142,20 @@ namespace ArteHacker.UITKEditorAid
         private void UpdateSerializedObjectIfNeeded()
         {
             // We keep a record of Objects that have been updated this frame to avoid the expensive cost of redundant updates.
-            if (m_SerializedObjectsUpdatedRecently.Contains(m_SerializedObject))
+            if (s_SerializedObjectsUpdatedRecently.Contains(m_SerializedObject))
                 return;
 
             m_SerializedObject.Update();
 
-            bool isTheFirstAddition = m_SerializedObjectsUpdatedRecently.Count == 0;
-            m_SerializedObjectsUpdatedRecently.Add(m_SerializedObject);
+            bool isTheFirstAddition = s_SerializedObjectsUpdatedRecently.Count == 0;
+            s_SerializedObjectsUpdatedRecently.Add(m_SerializedObject);
 
             // We clear the HashSet on the next frame so the Objects can be updated again later.
             if (isTheFirstAddition)
                 EditorApplication.delayCall += ClearSerializedObjectsUpdatedRecently;
 
             // Assigning a static method instead of an instance method to the delay delgate avoids creating garbage.
-            static void ClearSerializedObjectsUpdatedRecently() => m_SerializedObjectsUpdatedRecently.Clear();
+            static void ClearSerializedObjectsUpdatedRecently() => s_SerializedObjectsUpdatedRecently.Clear();
         }
 
         private void OnAttachToPanel(AttachToPanelEvent evt)

@@ -55,9 +55,12 @@ namespace ArteHacker.UITKEditorAid
     /// }
     /// ]]></code>
     /// </example>
-    public class EditableLabel : BindableElement, INotifyValueChanged<string>
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+    [UxmlElement]
+#endif
+    public partial class EditableLabel : BindableElement, INotifyValueChanged<string>
     {
-#if !REMOVE_UXML_FACTORIES
+#if !REMOVE_UXML_FACTORIES && !UNITY_2023_3_OR_NEWER
         public new class UxmlFactory : UxmlFactory<EditableLabel, UxmlTraits> { }
 
         public new class UxmlTraits : BindableElement.UxmlTraits
@@ -105,6 +108,9 @@ namespace ArteHacker.UITKEditorAid
         public bool editOnDoubleClick { get; set; } = true;
 
         /// <summary> Whether to use multiline text. </summary>
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+        [UxmlAttribute]
+#endif
         public bool multiline
         {
             get => m_TextField.multiline;
@@ -117,12 +123,18 @@ namespace ArteHacker.UITKEditorAid
         }
 
         /// <summary> Whether the TextField inside this element is delayed. It's true by default. </summary>
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+        [UxmlAttribute("is-delayed", "delayed")]
+#endif
         public bool isDelayed { get => m_TextField.isDelayed; set => m_TextField.isDelayed = value; }
 
         /// <summary> The maximum character length of this element's TextField. -1 means no limit and it's the default.  </summary>
         public int maxLength { get => m_TextField.maxLength; set => m_TextField.maxLength = value; }
 
         /// <summary> The string value of this element.</summary>
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+        [UxmlAttribute]
+#endif
         public string value
         {
             get => m_Value;
@@ -148,6 +160,9 @@ namespace ArteHacker.UITKEditorAid
         }
 
         /// <summary> A text that appears when the EditableLabel's text is empty. </summary>
+#if !REMOVE_UXML_FACTORIES && UNITY_2023_3_OR_NEWER
+        [UxmlAttribute]
+#endif
         public string emptyTextLabel
         {
             get => m_EmptyTextLabel;
@@ -159,6 +174,12 @@ namespace ArteHacker.UITKEditorAid
                     (m_Label as INotifyValueChanged<string>).SetValueWithoutNotify(m_EmptyTextLabel);
             }
         }
+
+        /// <summary> The <see cref="TextField"/> displayed when the text is being edited. </summary>
+        public TextField textFieldElement => m_TextField;
+
+        /// <summary> The <see cref="Label"/> VisualElement displayed when the text isn't being edited. </summary>
+        public Label labelElement => m_Label;
 
         public EditableLabel()
         {
@@ -178,33 +199,27 @@ namespace ArteHacker.UITKEditorAid
             m_Label = new Label { pickingMode = PickingMode.Ignore };
             m_Label.AddToClassList(labelUssClassName);
             Add(m_Label);
+
+            RegisterCallback<MouseDownEvent>(OnMouseDown);
         }
 
-#if UNITY_2022_2_OR_NEWER
-        [EventInterest(typeof(MouseDownEvent))]
-#endif
-        [RemoveFromDocs]
-        protected override void ExecuteDefaultActionAtTarget(EventBase evt)
+        private void OnMouseDown(MouseDownEvent e)
         {
-            base.ExecuteDefaultActionAtTarget(evt);
-            if (editOnDoubleClick
-                && evt is MouseDownEvent mouseDown
-                && mouseDown.button == 0
-                && mouseDown.modifiers == EventModifiers.None
-                && mouseDown.clickCount >= 2)
+            if (editOnDoubleClick && e.button == 0 && e.modifiers == EventModifiers.None && e.clickCount >= 2)
             {
                 BeginEditing();
+                e.StopPropagation();
             }
         }
 
         /// <summary> Call this method to put the label in edit mode. </summary>
         public void BeginEditing()
         {
+            // The display changes could also be in SimulateClick, but then the cursor doesn't update until the mouse moves for some reason.
             m_Label.style.display = DisplayStyle.None;
             m_TextField.style.display = DisplayStyle.Flex;
-            m_TextField.Focus();
 
-            // Delay it to avoid unpredictable behavior from clicking inside a click event.
+            // Delay it to avoid unpredictable behavior from clicking inside a click event, and to prevent focus from being undone.
             EditorApplication.delayCall += SimulateClick;
 
             // In 2021 and newer, the first Click on a focused field selects the text, even if it was already selected.
@@ -212,6 +227,10 @@ namespace ArteHacker.UITKEditorAid
             // foster consistent behavior. So we solve this by simulating the first click on the field.
             void SimulateClick()
             {
+                // Focus here instead of immediately on BeginEditing to avoid the focus being removed when mouse events are processed in 2023.2.
+                // It could also be avoided by calling the new focusController.IgnoreEvent, but this way it works everywhere by default.
+                m_TextField.Focus();
+
                 // UITK started using a different element to handle text in 2022.
 #if UNITY_2022_1_OR_NEWER
                 var textHandler = m_TextField.Q(null, TextElement.ussClassName);
