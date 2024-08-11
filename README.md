@@ -1,8 +1,7 @@
 [مساعدة محرر UITk
 
 تحتوي هذه الحزمة على عناصر أدوات واجهة المستخدم وأدوات مساعدة لواجهات المحرر المخصصة في Unity.
-](https://github.com/meslubi2021/UITKEditorAid?tab=readme-ov-file#uitk-editor-aid)
-كيفية التثبيت 
+
 
 راجع تثبيت حزمة من عنوان URL الخاص بـ Git لتثبيتها باستخدام مدير الحزم. عنوان URL الخاص بـ Git لهذه الحزمة هو https://meslubi2021.github.io/Assistant-Editor-UITK/.
 
